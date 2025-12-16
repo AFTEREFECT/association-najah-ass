@@ -27,23 +27,25 @@ function DailyOperationsJournal() {
     }
   }, [selectedAssociation, filters]);
 
-  const loadBalance = async () => {
-    if (!selectedAssociation) return;
+ const loadBalance = async () => {
+  if (!selectedAssociation) return;
 
-    try {
-      const balance = await window.electronAPI.getCurrentBalance(selectedAssociation);
-      const currentBalance = balance.bank_balance + balance.cash_balance;
-      
-      setStats(prev => ({
-        ...prev,
-        currentBalance: currentBalance,
-        bankBalance: balance.bank_balance,
-        cashBalance: balance.cash_balance
-      }));
-    } catch (error) {
-      console.error('Error loading balance:', error);
-    }
-  };
+  try {
+    const cash = await window.electronAPI.getCashBalance(selectedAssociation);
+    const bank = await window.electronAPI.getBankBalance(selectedAssociation);
+    const currentBalance = cash + bank;
+
+    setStats(prev => ({
+      ...prev,
+      currentBalance,
+      bankBalance: bank,
+      cashBalance: cash
+    }));
+  } catch (error) {
+    console.error('Error loading balance:', error);
+  }
+};
+
 
   const loadOperations = async () => {
     if (!selectedAssociation) return;

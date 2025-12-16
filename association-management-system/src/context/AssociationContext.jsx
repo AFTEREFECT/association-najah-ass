@@ -10,7 +10,7 @@ export const AssociationProvider = ({ children }) => {
   const [associations, setAssociations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // تحميل الجمعيات فقط (بدون تحميل الاختيار المحفوظ)
+  // تحميل الجمعيات عند البدء
   useEffect(() => {
     loadAssociations();
   }, []);
@@ -19,6 +19,16 @@ export const AssociationProvider = ({ children }) => {
     try {
       const data = await window.electronAPI.getAssociations();
       setAssociations(data);
+      
+      // استرجاع آخر جمعية تم اختيارها من الذاكرة المحلية
+      const savedAssocId = localStorage.getItem('selectedAssociationId');
+      if (savedAssocId && data.length > 0) {
+        const found = data.find(a => a.id === parseInt(savedAssocId));
+        if (found) {
+          setCurrentAssociation(found);
+          setSelectedAssociation(found.id);
+        }
+      }
     } catch (error) {
       console.error('Error loading associations:', error);
     } finally {
@@ -26,7 +36,7 @@ export const AssociationProvider = ({ children }) => {
     }
   };
 
-  // دالة اختيار الجمعية (بدون حفظ في localStorage)
+  // دالة اختيار الجمعية
   const selectAssociation = async (associationId) => {
     try {
       const association = associations.find(a => a.id === associationId);
@@ -34,6 +44,8 @@ export const AssociationProvider = ({ children }) => {
       if (association) {
         setCurrentAssociation(association);
         setSelectedAssociation(associationId);
+        // حفظ الاختيار
+        localStorage.setItem('selectedAssociationId', associationId);
       }
     } catch (error) {
       console.error('Error selecting association:', error);
@@ -44,9 +56,11 @@ export const AssociationProvider = ({ children }) => {
   const logoutAssociation = () => {
     setCurrentAssociation(null);
     setSelectedAssociation(null);
+    // مسح الاختيار
+    localStorage.removeItem('selectedAssociationId');
   };
 
-  // دالة جلب مجالات المداخيل
+  // دوال المساعدة لجلب المجالات
   const getIncomeFields = async () => {
     if (!selectedAssociation) return [];
     try {
@@ -57,7 +71,6 @@ export const AssociationProvider = ({ children }) => {
     }
   };
 
-  // دالة جلب مجالات المصاريف
   const getExpenseFields = async () => {
     if (!selectedAssociation) return [];
     try {
@@ -68,13 +81,9 @@ export const AssociationProvider = ({ children }) => {
     }
   };
 
-  // دالة جلب التصنيفات حسب النوع
   const getCategoriesByType = async (type) => {
-    if (type === 'income') {
-      return await getIncomeFields();
-    } else if (type === 'expense') {
-      return await getExpenseFields();
-    }
+    if (type === 'income') return await getIncomeFields();
+    if (type === 'expense') return await getExpenseFields();
     return [];
   };
 
@@ -85,7 +94,8 @@ export const AssociationProvider = ({ children }) => {
       associations,
       loading,
       selectAssociation, 
-      logoutAssociation,  // ← غيّرت الاسم لـ logoutAssociation
+      logoutAssociation,
+      loadAssociations, // ✅ تم إضافتها هنا (هذا هو سبب الخطأ سابقاً)
       getCategoriesByType,
       getIncomeFields,
       getExpenseFields

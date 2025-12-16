@@ -17,7 +17,7 @@ function CashRegister() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [cashBalance, setCashBalance] = useState(0);
+  const [cashBalance, setCashBalance] = useState(0); // ✅ افتراض 0
   const [filters, setFilters] = useState({
     fiscal_year: '2025',
     start_date: '',
@@ -41,7 +41,7 @@ function CashRegister() {
         ...filters,
         association_id: selectedAssociation,
       });
-      setTransactions(data);
+      setTransactions(data || []);
     } catch (error) {
       console.error('Error loading cash transactions:', error);
       alert('خطأ في تحميل البيانات');
@@ -50,18 +50,16 @@ function CashRegister() {
     }
   };
 
-  const loadBalance = async () => {
-    if (!selectedAssociation) return;
+ const loadBalance = async () => {
+  if (!selectedAssociation) return;
+  try {
+    const balance = await window.electronAPI.getCashBalance(selectedAssociation);
+    setCashBalance(balance?.cash_balance ?? 0);
+  } catch (error) {
+    console.error('Error loading balance:', error);
+  }
+};
 
-    try {
-      const balance = await window.electronAPI.getCurrentBalance(
-        selectedAssociation
-      );
-      setCashBalance(balance.cash_balance);
-    } catch (error) {
-      console.error('Error loading balance:', error);
-    }
-  };
 
   const handleDeleteTransaction = async (id) => {
     if (!window.confirm('هل تريد فعلاً حذف هذه العملية؟')) return;
@@ -95,7 +93,7 @@ function CashRegister() {
           <div className="cash-balance-badge">
             <span className="balance-label">رصيد الصندوق:</span>
             <span className="balance-amount">
-              {cashBalance.toFixed(2)} درهم
+              {(cashBalance || 0).toFixed(2)} درهم {/* ✅ */}
             </span>
           </div>
         </div>
@@ -207,7 +205,11 @@ function CashRegister() {
                 transactions.map((tx) => (
                   <tr key={tx.id} className={`row-${tx.movement_type}`}>
                     <td className="cell-date">
-                      {new Date(tx.transaction_date).toLocaleDateString('ar-MA')}
+                      {tx.transaction_date
+                        ? new Date(tx.transaction_date).toLocaleDateString(
+                            'ar-MA'
+                          )
+                        : '-'}
                     </td>
                     <td className="cell-description">{tx.operation_label}</td>
                     <td>
@@ -224,18 +226,18 @@ function CashRegister() {
                       )}
                     </td>
                     <td className="cell-amount receipt">
-                      {tx.movement_type === 'receipt' ? (
+                      {tx.movement_type === 'receipt' && tx.amount != null ? (
                         <span className="amount-value">
-                          +{tx.amount.toFixed(2)}
+                          +{Number(tx.amount).toFixed(2)}
                         </span>
                       ) : (
                         <span className="amount-placeholder">-</span>
                       )}
                     </td>
                     <td className="cell-amount payment">
-                      {tx.movement_type === 'payment' ? (
+                      {tx.movement_type === 'payment' && tx.amount != null ? (
                         <span className="amount-value">
-                          -{tx.amount.toFixed(2)}
+                          -{Number(tx.amount).toFixed(2)}
                         </span>
                       ) : (
                         <span className="amount-placeholder">-</span>
@@ -243,7 +245,7 @@ function CashRegister() {
                     </td>
                     <td className="cell-amount balance">
                       <span className="balance-value">
-                        {tx.balance_after.toFixed(2)}
+                        {Number(tx.balance_after || 0).toFixed(2)}
                       </span>
                     </td>
                     <td className="cell-actions">
@@ -282,17 +284,17 @@ function CashRegister() {
                   <td className="total-receipt">
                     {transactions
                       .filter((tx) => tx.movement_type === 'receipt')
-                      .reduce((sum, tx) => sum + tx.amount, 0)
+                      .reduce((sum, tx) => sum + (tx.amount || 0), 0)
                       .toFixed(2)}
                   </td>
                   <td className="total-payment">
                     {transactions
                       .filter((tx) => tx.movement_type === 'payment')
-                      .reduce((sum, tx) => sum + tx.amount, 0)
+                      .reduce((sum, tx) => sum + (tx.amount || 0), 0)
                       .toFixed(2)}
                   </td>
                   <td className="final-balance">
-                    {cashBalance.toFixed(2)}
+                    {(cashBalance || 0).toFixed(2)}
                   </td>
                   <td></td>
                 </tr>

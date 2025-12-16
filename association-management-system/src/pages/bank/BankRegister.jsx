@@ -6,7 +6,7 @@ function BankRegister() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [bankBalance, setBankBalance] = useState(0);
+  const [bankBalance, setBankBalance] = useState(0); // ✅ افتراضي 0
   const [filters, setFilters] = useState({
     fiscal_year: '2025',
     start_date: '',
@@ -30,7 +30,7 @@ function BankRegister() {
         ...filters,
         association_id: selectedAssociation
       });
-      setTransactions(data);
+      setTransactions(data || []);
     } catch (error) {
       console.error('Error loading bank transactions:', error);
       alert('خطأ في تحميل البيانات');
@@ -39,16 +39,16 @@ function BankRegister() {
     }
   };
 
-  const loadBalance = async () => {
-    if (!selectedAssociation) return;
+ const loadBalance = async () => {
+  if (!selectedAssociation) return;
+  try {
+    const balance = await window.electronAPI.getBankBalance(selectedAssociation);
+    setBankBalance(balance?.bank_balance ?? 0);
+  } catch (error) {
+    console.error('Error loading balance:', error);
+  }
+};
 
-    try {
-      const balance = await window.electronAPI.getCurrentBalance(selectedAssociation);
-      setBankBalance(balance.bank_balance);
-    } catch (error) {
-      console.error('Error loading balance:', error);
-    }
-  };
 
   return (
     <div className="bank-register">
@@ -62,7 +62,9 @@ function BankRegister() {
           )}
           <div className="bank-balance-badge">
             <span className="balance-label">رصيد البنك:</span>
-            <span className="balance-amount">{bankBalance.toFixed(2)} درهم</span>
+            <span className="balance-amount">
+              {(bankBalance || 0).toFixed(2)} درهم {/* ✅ */}
+            </span>
           </div>
         </div>
         <div className="header-actions">
@@ -162,27 +164,35 @@ function BankRegister() {
                 transactions.map((tx) => (
                   <tr key={tx.id} className={`row-${tx.movement_type}`}>
                     <td className="cell-date">
-                      {new Date(tx.transaction_date).toLocaleDateString('ar-MA')}
+                      {tx.transaction_date
+                        ? new Date(tx.transaction_date).toLocaleDateString('ar-MA')
+                        : '-'}
                     </td>
                     <td className="cell-description">{tx.operation_label}</td>
                     <td className="cell-check">{tx.check_number || '-'}</td>
                     <td>{tx.payment_method_name || '-'}</td>
                     <td className="cell-amount deposit">
-                      {tx.movement_type === 'deposit' ? (
-                        <span className="amount-value">+{tx.amount.toFixed(2)}</span>
+                      {tx.movement_type === 'deposit' && tx.amount != null ? (
+                        <span className="amount-value">
+                          +{Number(tx.amount).toFixed(2)}
+                        </span>
                       ) : (
                         <span className="amount-placeholder">-</span>
                       )}
                     </td>
                     <td className="cell-amount withdrawal">
-                      {tx.movement_type === 'withdrawal' ? (
-                        <span className="amount-value">-{tx.amount.toFixed(2)}</span>
+                      {tx.movement_type === 'withdrawal' && tx.amount != null ? (
+                        <span className="amount-value">
+                          -{Number(tx.amount).toFixed(2)}
+                        </span>
                       ) : (
                         <span className="amount-placeholder">-</span>
                       )}
                     </td>
                     <td className="cell-amount balance">
-                      <span className="balance-value">{tx.balance_after.toFixed(2)}</span>
+                      <span className="balance-value">
+                        {Number(tx.balance_after || 0).toFixed(2)}
+                      </span>
                     </td>
                     <td className="cell-actions">
                       <button className="btn-icon" title="تعديل">✏️</button>
@@ -199,16 +209,18 @@ function BankRegister() {
                   <td className="total-deposit">
                     {transactions
                       .filter((tx) => tx.movement_type === 'deposit')
-                      .reduce((sum, tx) => sum + tx.amount, 0)
+                      .reduce((sum, tx) => sum + (tx.amount || 0), 0)
                       .toFixed(2)}
                   </td>
                   <td className="total-withdrawal">
                     {transactions
                       .filter((tx) => tx.movement_type === 'withdrawal')
-                      .reduce((sum, tx) => sum + tx.amount, 0)
+                      .reduce((sum, tx) => sum + (tx.amount || 0), 0)
                       .toFixed(2)}
                   </td>
-                  <td className="final-balance">{bankBalance.toFixed(2)}</td>
+                  <td className="final-balance">
+                    {(bankBalance || 0).toFixed(2)}
+                  </td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -252,7 +264,7 @@ function AddBankTransactionModal({ associationId, onClose, onSuccess }) {
   const loadPaymentMethods = async () => {
     try {
       const methods = await window.electronAPI.getPaymentMethods(associationId);
-      setPaymentMethods(methods);
+      setPaymentMethods(methods || []);
     } catch (error) {
       console.error('Error loading payment methods:', error);
     }

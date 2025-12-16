@@ -22,25 +22,30 @@ function Dashboard() {
     }
   }, [selectedAssociation]);
 
-  const loadDashboardData = async () => {
-    setLoading(true);
-    try {
-      const balance = await window.electronAPI.getCurrentBalance(selectedAssociation);
-      
-      setStats({
-        total_balance: balance.total_balance,
-        cash_balance: balance.cash_balance,
-        bank_balance: balance.bank_balance,
-        total_income: 0,
-        total_expenses: 0,
-        operations_count: 0
-      });
-    } catch (error) {
-      console.error('Error loading dashboard:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const loadDashboardData = async () => {
+  if (!selectedAssociation) return;
+
+  setLoading(true);
+  try {
+    const cash  = await window.electronAPI.getCashBalance(selectedAssociation);
+    const bank  = await window.electronAPI.getBankBalance(selectedAssociation);
+    const total = cash + bank;
+
+    setStats({
+      total_balance: total,
+      cash_balance: cash,
+      bank_balance: bank,
+      total_income: 0,
+      total_expenses: 0,
+      operations_count: 0
+    });
+  } catch (error) {
+    console.error('Error loading dashboard:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="dashboard">
@@ -62,7 +67,7 @@ function Dashboard() {
               <div className="stat-icon">💰</div>
               <div className="stat-info">
                 <h3>الرصيد الحالي</h3>
-                <p className="stat-value">{stats.total_balance.toFixed(2)} درهم</p>
+                 <p className="stat-value">{(stats.total_balance || 0).toFixed(2)} درهم</p>
               </div>
             </div>
 
@@ -70,7 +75,7 @@ function Dashboard() {
               <div className="stat-icon">📈</div>
               <div className="stat-info">
                 <h3>إجمالي المداخيل</h3>
-                <p className="stat-value">{stats.total_income.toFixed(2)} درهم</p>
+           <p className="stat-value">{(stats.total_income || 0).toFixed(2)} درهم</p>
               </div>
             </div>
 
@@ -78,7 +83,7 @@ function Dashboard() {
               <div className="stat-icon">📉</div>
               <div className="stat-info">
                 <h3>إجمالي المصاريف</h3>
-                <p className="stat-value">{stats.total_expenses.toFixed(2)} درهم</p>
+               <p className="stat-value">{(stats.total_expenses || 0).toFixed(2)} درهم</p>
               </div>
             </div>
 
@@ -90,7 +95,6 @@ function Dashboard() {
               </div>
             </div>
           </div>
-
           <div className="quick-actions">
             <h2>الوصول السريع</h2>
             <div className="actions-grid">
@@ -100,7 +104,7 @@ function Dashboard() {
               >
                 <div className="action-icon">🏦</div>
                 <h3>سجل الصندوق</h3>
-                <p className="action-balance">{stats.cash_balance.toFixed(2)} درهم</p>
+                <p className="action-balance">{(stats.cash_balance || 0).toFixed(2)} درهم</p>
               </button>
 
               <button 
@@ -109,7 +113,7 @@ function Dashboard() {
               >
                 <div className="action-icon">🏛️</div>
                 <h3>سجل البنك</h3>
-                <p className="action-balance">{stats.bank_balance.toFixed(2)} درهم</p>
+                <p className="action-balance">{(stats.bank_balance || 0).toFixed(2)} درهم</p>
               </button>
 
               <button 

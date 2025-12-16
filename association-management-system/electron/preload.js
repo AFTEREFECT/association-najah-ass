@@ -4,8 +4,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Associations
   getAssociations: () => ipcRenderer.invoke('get-associations'),
   addAssociation: (data) => ipcRenderer.invoke('add-association', data),
-  getCurrentBalance: (id) => ipcRenderer.invoke('get-current-balance', id),
-  
+  getCashBalance: (id) => ipcRenderer.invoke('get-cash-balance', id),
+getBankBalance: (id) => ipcRenderer.invoke('get-bank-balance', id),
+
   // Fields & Settings
   getIncomeFields: (id) => ipcRenderer.invoke('get-income-fields', id),
   getExpenseFields: (id) => ipcRenderer.invoke('get-expense-fields', id),
